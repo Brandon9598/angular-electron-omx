@@ -1,10 +1,18 @@
 import { app, BrowserWindow, screen } from 'electron';
 import * as path from 'path';
 import * as url from 'url';
+import * as Omx from 'node-omxplayer';
+import * as fse from "fs-extra";
 
 let win, serve;
+let omxPlayer;
 const args = process.argv.slice(1);
 serve = args.some(val => val === '--serve');
+
+
+const ANGULAR_ELECTRON_OMX = path.join(app.getPath("appData"), "angular-electron-omx/");
+const ANGULAR_ELECTRON_OMX_ASSETS = path.join(ANGULAR_ELECTRON_OMX, "/assets/");
+// const ANGULAR_ELECTRON_OMX_LOG = path.join(ANGULAR_ELECTRON_OMX, "sd_log.txt");
 
 function createWindow() {
 
@@ -19,6 +27,8 @@ function createWindow() {
     height: size.height,
     webPreferences: {
       nodeIntegration: true,
+      webSecurity: false,
+      devTools: true
     },
   });
 
@@ -46,6 +56,8 @@ function createWindow() {
     // when you should delete the corresponding element.
     win = null;
   });
+
+  playOMXVideos();
 
 }
 
@@ -76,4 +88,33 @@ try {
 } catch (e) {
   // Catch Error
   // throw e;
+}
+
+function playOMXVideos(){
+  logMessage("Starting the process of playing the video");
+  const videoSource = path.join(ANGULAR_ELECTRON_OMX_ASSETS, 'Jose.mp4')
+  omxPlayer = Omx(videoSource, "both", false, 100);
+  omxPlayer.on("close", (e, videoResp) => {
+    // Log that the video finished
+    const message = `Video Finish Response: ${videoResp}\nError: ${e}`
+    logMessage(message);
+    // quit all children proccess
+
+
+    // Call function again
+    playOMXVideos();
+  })
+  omxPlayer.on("error", err => logMessage(`OMXPlayer encountered an error: ${err}`))
+}
+
+async function logMessage(message) {
+  const formmattedMessage = `${new Date()}:\n${message}\n`
+  console.log(formmattedMessage);
+  try {
+    await fse.outputFile(ANGULAR_ELECTRON_OMX, formmattedMessage, {
+      flag: "a"
+    });
+  } catch (err) {
+    console.log("error writing to file");
+  }
 }
