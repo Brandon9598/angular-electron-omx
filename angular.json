@@ -28,8 +28,7 @@
               "src/styles.scss"
             ],
             "scripts": [
-              "./node_modules/node-omxplayer/index.js",
-              "./node_modules/fs-extra/lib/index.js"
+              "./node_modules/omxplayer-dbus/lib/OmxPlayer.js"
             ],
             "customWebpackConfig": {
               "path": "./angular.webpack.js"

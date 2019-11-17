@@ -1,18 +1,22 @@
 import { app, BrowserWindow, screen } from 'electron';
+const spawn = require('child_process').spawn;
 import * as path from 'path';
 import * as url from 'url';
-import * as Omx from 'node-omxplayer';
-import * as fse from "fs-extra";
+import * as fse from 'fs-extra';
+import * as OmxPlayer from 'omxplayer-dbus';
+
 
 let win, serve;
 let omxPlayer;
 const args = process.argv.slice(1);
 serve = args.some(val => val === '--serve');
 
+const VIDEOS = ['short_a.mov', 'short_b.mov'];
+let videoIndex = 0;
 
 const ANGULAR_ELECTRON_OMX = path.join(app.getPath("appData"), "angular-electron-omx/");
 const ANGULAR_ELECTRON_OMX_ASSETS = path.join(ANGULAR_ELECTRON_OMX, "/assets/");
-// const ANGULAR_ELECTRON_OMX_LOG = path.join(ANGULAR_ELECTRON_OMX, "sd_log.txt");
+const ANGULAR_ELECTRON_OMX_LOG = path.join(ANGULAR_ELECTRON_OMX, "aeo_log.txt");
 
 function createWindow() {
 
@@ -49,6 +53,10 @@ function createWindow() {
     win.webContents.openDevTools();
   }
 
+  // Prepare and Play OMXPlayer
+  omxPlayer = new OmxPlayer();
+  playOMXVideos();
+
   // Emitted when the window is closed.
   win.on('closed', () => {
     // Dereference the window object, usually you would store window
@@ -57,7 +65,6 @@ function createWindow() {
     win = null;
   });
 
-  playOMXVideos();
 
 }
 
@@ -90,31 +97,97 @@ try {
   // throw e;
 }
 
-function playOMXVideos(){
+async function playOMXVideos(){
   logMessage("Starting the process of playing the video");
-  const videoSource = path.join(ANGULAR_ELECTRON_OMX_ASSETS, 'Jose.mp4')
-  omxPlayer = Omx(videoSource, "both", false, 100);
-  omxPlayer.on("close", (e, videoResp) => {
-    // Log that the video finished
-    const message = `Video Finish Response: ${videoResp}\nError: ${e}`
-    logMessage(message);
-    // quit all children proccess
 
-
-    // Call function again
-    playOMXVideos();
+  const videoSource = path.join(ANGULAR_ELECTRON_OMX_ASSETS, VIDEOS[videoIndex]);
+  omxPlayer.open(videoSource, {}).then(() => {
+    console.log("Video starting", videoSource);
   })
-  omxPlayer.on("error", err => logMessage(`OMXPlayer encountered an error: ${err}`))
+    
+
+  omxPlayer.on('close', (exitCode)=>{
+    console.log(`player closed with exitCode ${exitCode}`);
+    videoIndex = (videoIndex++) % VIDEOS.length;
+    omxPlayer.removeAllListeners();
+    playOMXVideos();
+  });
+  
+  omxPlayer.on('error', (error)=>{
+    console.log(`player return error: ${error}`);
+  });
 }
 
 async function logMessage(message) {
   const formmattedMessage = `${new Date()}:\n${message}\n`
   console.log(formmattedMessage);
   try {
-    await fse.outputFile(ANGULAR_ELECTRON_OMX, formmattedMessage, {
+    await fse.outputFile(ANGULAR_ELECTRON_OMX_LOG, formmattedMessage, {
       flag: "a"
     });
   } catch (err) {
-    console.log("error writing to file");
+    console.log("error writing to file", err);
   }
+}
+
+function poll(){
+
+  console.log('** poll **');
+
+  // omxPlayer.setPosition(10, (err, seconds)=>{
+  //   console.log(`setPosition: ${err||seconds}`);
+  // });
+
+  // omxPlayer.seek(5, (err, seconds)=>{
+  //   console.log(`seek: ${err||seconds}`);
+  // });
+
+  omxPlayer.mute((err)=>{
+    console.log(`mute: ${err}`);
+  });
+
+  omxPlayer.unmute((err)=>{
+    console.log(`mute: ${err}`);
+  });
+
+  omxPlayer.getCanSeek((err, can)=>{
+    console.log(`can seek: ${err||can}`);
+  });
+
+  omxPlayer.getCanPlay((err, can)=>{
+    console.log(`can play: ${err||can}`);
+  });
+
+  omxPlayer.getCanPause((err, can)=>{
+    console.log(`can pause: ${err||can}`);
+  });
+
+  omxPlayer.getPlaybackStatus((err, state)=>{
+    console.log(`playback state: ${err||state}`);
+  });
+
+  omxPlayer.getPlaying((err, state)=>{
+    console.log(`playing: ${err||state}`);
+  });
+
+  omxPlayer.getPaused((err, state)=>{
+    console.log(`paused: ${err||state}`);
+  });
+
+  omxPlayer.getVolume((err, volume)=>{
+    console.log(`volume: ${err||volume}`);
+  });
+
+  omxPlayer.setVolume(0.5, (err, volume)=>{
+    console.log(`volume: ${err||volume}`);
+  });
+
+  omxPlayer.getPosition((err, seconds)=>{
+    console.log(`position: ${err||seconds}`);
+  });
+
+  omxPlayer.getDuration((err, duration)=>{
+    console.log(`duration: ${err||duration}`);
+  });
+
 }

@@ -5,6 +5,8 @@ import { Injectable } from '@angular/core';
 import { ipcRenderer, webFrame, remote } from 'electron';
 import * as childProcess from 'child_process';
 import * as fs from 'fs';
+import * as fse from 'fs-extra';
+import * as OmxPlayer from 'omxplayer-dbus';
 
 @Injectable({
   providedIn: 'root'
@@ -15,6 +17,8 @@ export class ElectronService {
   remote: typeof remote;
   childProcess: typeof childProcess;
   fs: typeof fs;
+  fse: typeof fse;
+  OmxPlayer: typeof OmxPlayer;
 
   get isElectron() {
     return window && window.process && window.process.type;
@@ -29,6 +33,8 @@ export class ElectronService {
 
       this.childProcess = window.require('child_process');
       this.fs = window.require('fs');
+      this.fse = window.require('fse');
+      this.OmxPlayer = window.require('omxplayer-dbus');
     }
   }
 }
